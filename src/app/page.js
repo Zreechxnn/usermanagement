@@ -1,95 +1,116 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
+import { useState, useEffect } from "react";
 
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.js</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [users, setUsers] = useState([]);
+  const [name, setName] = useState(""); 
+  const [email, setEmail] = useState(""); 
+  const [editingUser, setEditingUser] = useState(null); 
+  const [showAll, setShowAll] = useState(false); 
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
+  const fetchUsers = async () => {
+    const res = await fetch("/api/users");
+    const data = await res.json();
+    setUsers(data);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (editingUser) {
+      await updateUser(editingUser.id);
+    } else {
+      await addUser();
+    }
+    setName("");
+    setEmail("");
+    setEditingUser(null);
+    fetchUsers();
+  };
+
+  const addUser = async () => {
+    await fetch("/api/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email }),
+    });
+  };
+
+  const updateUser = async (id) => {
+    await fetch("/api/users", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, name, email }),
+    });
+  };
+
+  const deleteUser = async (id) => {
+    await fetch("/api/users", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    fetchUsers();
+  };
+
+  const handleEdit = (user) => {
+    setEditingUser(user);
+    setName(user.name);
+    setEmail(user.email);
+  };
+
+  const toggleShowAllUsers = () => {
+    setShowAll(!showAll);
+  };
+
+  return (
+    <div className="container">
+      <h1>User Management</h1>
+      <form onSubmit={handleSubmit} className="form">
+        <div className="input-group">
+          <input
+            type="text"
+            placeholder="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
         </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+        <div className="input-group">
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        </div>
+        <button type="submit">{editingUser ? "Update User" : "Add User"}</button>
+      </form>
+
+      <h2>Users List</h2>
+      <button onClick={toggleShowAllUsers} className="show-all-btn">
+        {showAll ? "Hide All Users" : "Show All Users"}
+      </button>
+
+      <div className="user-list">
+        {users.map((user) => (
+          <div key={user.id} className="user-card">
+            {showAll && (
+              <div className="user-details">
+                <h3>{user.name}</h3>
+                <p>{user.email}</p>
+                <p><strong>Created At:</strong> {new Date(user.createdAt).toLocaleString()}</p>
+                <p><strong>Updated At:</strong> {new Date(user.updatedAt).toLocaleString()}</p>
+                <div className="button-group">
+                  <button onClick={() => handleEdit(user)} className="edit-btn">Edit</button>
+                  <button onClick={() => deleteUser(user.id)} className="delete-btn">Delete</button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
